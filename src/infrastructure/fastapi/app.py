@@ -17,10 +17,10 @@ from src.utils.metadata import Base
 async def lifespan(app_: FastAPI) -> AsyncIterator[None]:
     # Database init
     from src.infrastructure.database.base import engine
-    # from src.infrastructure.database.healthcheck import healthcheck as db_healthcheck
-    # await db_healthcheck()  # Check database connection
-    # async with engine.begin() as conn:
-    #     await conn.run_sync(Base.metadata.create_all)
+    from src.infrastructure.database.healthcheck import healthcheck as db_healthcheck
+    await db_healthcheck()  # Check database connection
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
     # Trongrid pooling init
     transactions_queue = asyncio.Queue()

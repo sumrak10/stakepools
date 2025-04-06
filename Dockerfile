@@ -1,7 +1,7 @@
 ###########
 # BUILDER #
 ###########
-FROM python:3.12 as builder
+FROM python:3.12 AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

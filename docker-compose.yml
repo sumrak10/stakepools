@@ -1,0 +1,25 @@
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "8560:8560"
+    depends_on:
+      - db
+    env_file:
+      - .env
+
+  db:
+    image: postgres:15
+    container_name: stakepools_db
+    hostname: stakepools_db
+    restart: always
+    ports:
+      - "5432:5432"
+    env_file:
+      - .postgres.env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
