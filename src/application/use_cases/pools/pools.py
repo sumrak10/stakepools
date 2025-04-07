@@ -7,7 +7,13 @@ class PoolsUseCase:
     @classmethod
     async def get_user_pools(cls, uow: IUnitOfWork) -> list[PoolWithUserTXDTO]:
         async with uow:
-            pools = await uow.pools.get_user_pools(uow.current_user.id)
+            pools = await uow.pools.get_user_pools(uow.current_user.id, is_revenue=False)
+            revenue_pools = await uow.pools.get_user_pools(uow.current_user.id, is_revenue=True)
+            for pool in pools:
+                for revenue_pool in revenue_pools:
+                    if pool.id == revenue_pool.id:
+                        pool.revenue_amount = revenue_pool.deposit_amount_summ
+                        pool.revenue_transactions = revenue_pool.deposit_transactions
             await uow.commit()
         return pools
 

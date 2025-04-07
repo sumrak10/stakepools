@@ -23,6 +23,7 @@ class PoolUserModel(TimestampMixin, Base):
     user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
     transaction_id: Mapped[int | None] = mapped_column(ForeignKey('transactions.id'))
     deposit_amount: Mapped[CryptoAmount]
+    is_revenue: Mapped[bool]
 
     pool: Mapped['PoolModel'] = relationship(backref='pool_users', lazy='noload')
     user: Mapped['UserModel'] = relationship(backref='pools', lazy='noload')

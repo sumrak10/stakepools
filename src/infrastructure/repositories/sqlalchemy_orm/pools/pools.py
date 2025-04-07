@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from sqlalchemy import insert, select, update, func, and_
-from sqlalchemy.orm import joinedload
+from sqlalchemy import insert, select, update, func, and_, or_
+from sqlalchemy.orm import joinedload, aliased
 
 from src.application.transport.pools.pools import PoolDTO, PoolUserDTO, PoolStatus, PoolWithUserTXDTO
 from src.domain.models import TransactionModel
@@ -72,7 +72,7 @@ class PoolsRepository(AbstractSQLAlchemyRepository):
         res = await self._session.execute(stmt)
         return [pool.to_dto() for pool in res.scalars().all()]
 
-    async def get_user_pools(self, user_id: int) -> list[PoolWithUserTXDTO]:
+    async def get_user_pools(self, user_id: int, is_revenue: bool) -> list[PoolWithUserTXDTO]:
         stmt = (
             select(
                 PoolModel.id,
@@ -80,9 +80,10 @@ class PoolsRepository(AbstractSQLAlchemyRepository):
                 PoolModel.execution_days,
                 PoolModel.expected_amount,
                 PoolModel.status,
+                PoolModel.created_at,
                 func.sum(
                     PoolUserModel.deposit_amount
-                ).label("deposit_amount_summ"),
+                ).label("amount_summ"),
                 func.jsonb_agg(
                     func.jsonb_build_object(
                         "id", TransactionModel.id,
@@ -93,16 +94,17 @@ class PoolsRepository(AbstractSQLAlchemyRepository):
                         "to_address", TransactionModel.to_address,
                         "timestamp", TransactionModel.timestamp,
                     )
-                ).label("deposit_transactions")
-            )
+                ).label("deposit_transactions"),
+            ).select_from(PoolModel)
             .join(PoolUserModel, and_(
                 PoolUserModel.pool_id == PoolModel.id,
                 PoolUserModel.user_id == user_id,
-                PoolUserModel.transaction_id.is_not(None)
+                PoolUserModel.transaction_id.is_not(None),
+                PoolUserModel.is_revenue == is_revenue,
             ))
             .join(
                 TransactionModel,
-                TransactionModel.id == PoolUserModel.transaction_id
+                TransactionModel.id == PoolUserModel.transaction_id,
             )
             .group_by(
                 PoolModel.id,
@@ -110,6 +112,7 @@ class PoolsRepository(AbstractSQLAlchemyRepository):
                 PoolModel.execution_days,
                 PoolModel.expected_amount,
                 PoolModel.status,
+                PoolModel.created_at,
             )
         )
         res = await self._session.execute(stmt)
@@ -121,8 +124,11 @@ class PoolsRepository(AbstractSQLAlchemyRepository):
                 execution_days=row["execution_days"],
                 expected_amount=row["expected_amount"],
                 status=row["status"],
-                deposit_amount_summ=row["deposit_amount_summ"],
+                created_at=row["created_at"],
+                deposit_amount_summ=row["amount_summ"],
+                revenue_amount=0,
                 deposit_transactions=row["deposit_transactions"],
+                revenue_transactions=[]
             )
 
         return [to_dto(row) for row in res.mappings().all()]

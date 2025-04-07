@@ -35,8 +35,11 @@ class JWTAuthUseCase:
                       refresh_token: str,
                       ) -> TokensPairDTO:
         async with uow:
-            user_id = cls._validate_token(refresh_token)
-            user = await uow.users.get_one_by_id(user_id)
+            try:
+                decoded_token = cls._validate_and_return_decoded(refresh_token)
+            except jwt.exceptions.PyJWTError:
+                raise http_exc.UnauthorizedHTTPException
+            user = await uow.users.get_one_by_id(decoded_token["user_id"])
             if not user:
                 raise http_exc.UnauthorizedHTTPException
             await uow.commit()
