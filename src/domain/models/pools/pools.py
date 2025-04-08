@@ -74,4 +74,5 @@ class PoolModel(TimestampMixin, Base):
             expected_amount=self.expected_amount,
             status=self.status,
             current_amount=self.current_amount if self.current_amount else 0,
+            created_at=self.created_at,
         )
